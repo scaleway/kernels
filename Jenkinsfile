@@ -57,6 +57,11 @@ pipeline {
         )
       }
     }
+    stage('Archive kernels') {
+      steps {
+        archive includes: '*/release/**'
+      }
+    }
   }
 }
 
