@@ -3,6 +3,12 @@
 branch=$1
 buildno=$2
 arch=$3
+if [ "$4" = 'release' ]; then
+    is_test=false
+else
+    is_test=true
+fi
+
 
 urlencode() {
     echo $(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' $1)
@@ -22,5 +28,5 @@ elif [ "$arch" = 'arm64' ]; then
 fi
 kernel_name="${image_type}-${kernel_version}"
 
-jq -n --arg kf "$kernel_flavor" --arg kv "$kernel_version" --arg kn "$kernel_name" --arg bp "$build_path" --arg a "$arch" \
-    '{ kernel_flavor: $kf, kernel_version: $kv, kernel_name: $kn, build_path: $bp, arch: $a }'
+jq -n --arg t $is_test --arg kf "$kernel_flavor" --arg kv "$kernel_version" --arg kn "$kernel_name" --arg bp "$build_path" --arg a "$arch" \
+    '{ type: "kernel", test: ($t == "true"), data: { kernel_flavor: $kf, kernel_version: $kv, kernel_name: $kn, build_path: $bp, arch: $a } }'

@@ -6,7 +6,7 @@ pipeline {
       steps {
         script {
           json_message = sh(
-            script: './request_json.sh ${BUILD_BRANCH} ${BUILD_NUMBER} ${ARCH}',
+            script: './request_json.sh ${BUILD_BRANCH} ${BUILD_NUMBER} ${ARCH} test',
             returnStdout: true
           )
         }
