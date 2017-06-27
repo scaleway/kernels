@@ -53,6 +53,6 @@ pack: $(RELEASE_DIR) $(PACK_DEP)
 	cd $(RELEASE_DIR) && tar -cf modules.tar modules
 	cd $(KERNEL_SRC_DIR) && cp System.map Module.symvers modules.* include/config/kernel.release $(RELEASE_DIR)/
 	cp $(KERNEL_SRC_DIR)/.config $(RELEASE_DIR)/config-$(KVERSION)
-	cd $(RELEASE_DIR) && tar -cJf linux-mainline-$(VERSION).tar.xz *
+	cd $(RELEASE_DIR) && tar -cJf linux.tar.xz *
 
 linux: patch config build pack
