@@ -18,6 +18,8 @@ endif
 
 KVERSION= $(shell $(KMAKE) --no-print-directory kernelversion)
 
+KMAKE += LOCALVERSION="-mainline-lts-4.9-$(KVERSION)"
+
 usage:
 	@echo "make linux TARGET_ARCH=... KERNEL_SRC_DIR=... [BUILD_DIR=...] [RELEASE_DIR=...] [CONCURRENCY=...]"
 
