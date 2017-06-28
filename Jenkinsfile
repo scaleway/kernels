@@ -8,17 +8,11 @@ pipeline {
         parallel(
           'arm': {
             dir("arm") {
-              hasReleaseDir = fileExists('release')
-              if(hasReleaseDir) {
-                dir("release") {
-                  deleteDir()
-                }
+              dir("release") {
+                deleteDir()
               }
-              hasBuildDir = fileExists('build')
-              if(hasBuildDir) {
-                dir("build") {
-                  deleteDir()
-                }
+              dir("build") {
+                deleteDir()
               }
               dir("kernel") {
                 checkout([
@@ -36,17 +30,11 @@ pipeline {
           },
           'x86_64': {
             dir("x86_64") {
-              hasReleaseDir = fileExists('release')
-              if(hasReleaseDir) {
-                dir("release") {
-                  deleteDir()
-                }
+              dir("release") {
+                deleteDir()
               }
-              hasBuildDir = fileExists('build')
-              if(hasBuildDir) {
-                dir("build") {
-                  deleteDir()
-                }
+              dir("build") {
+                deleteDir()
               }
               dir("kernel") {
                 checkout([
@@ -64,17 +52,11 @@ pipeline {
           },
           'arm64': {
             dir("arm64") {
-              hasReleaseDir = fileExists('release')
-              if(hasReleaseDir) {
-                dir("release") {
-                  deleteDir()
-                }
+              dir("release") {
+                deleteDir()
               }
-              hasBuildDir = fileExists('build')
-              if(hasBuildDir) {
-                dir("build") {
-                  deleteDir()
-                }
+              dir("build") {
+                deleteDir()
               }
               dir("kernel") {
                 checkout([
