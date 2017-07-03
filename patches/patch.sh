@@ -2,4 +2,4 @@
 
 KERNEL_DIR=$1
 
-./patch_aufs.sh $KERNEL_DIR 4.9
+./patches/patch_aufs.sh $KERNEL_DIR 4.9
