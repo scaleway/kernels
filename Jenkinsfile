@@ -2,6 +2,11 @@ pipeline {
   agent {
     label 'x86_64'
   }
+
+  triggers {
+    pollSCM("H */2 * * *")
+  }
+
   stages {
     stage('Compile kernel') {
       steps {
@@ -17,6 +22,7 @@ pipeline {
               dir("kernel") {
                 checkout([
                   $class: 'GitSCM',
+                  poll: true,
                   branches: [[name: 'linux-4.9.y']],
                   extensions: [
                     [$class: 'CheckoutOption', timeout: 30],
@@ -39,6 +45,7 @@ pipeline {
               dir("kernel") {
                 checkout([
                   $class: 'GitSCM',
+                  poll: true,
                   branches: [[name: 'linux-4.9.y']],
                   extensions: [
                     [$class: 'CheckoutOption', timeout: 30],
@@ -61,6 +68,7 @@ pipeline {
               dir("kernel") {
                 checkout([
                   $class: 'GitSCM',
+                  poll: true,
                   branches: [[name: 'linux-4.9.y']],
                   extensions: [
                     [$class: 'CheckoutOption', timeout: 30],
