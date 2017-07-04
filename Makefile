@@ -32,7 +32,7 @@ $(BUILD_DIR) $(RELEASE_DIR):
 	mkdir $@
 
 patch:
-	if [ -f patches/patch.sh ]; then bash -xe patches/patch.sh $(KERNEL_SRC_DIR); fi
+	if [ -f $(CONFIG_DIR)/patches/patch.sh ]; then bash -xe $(CONFIG_DIR)/patches/patch.sh $(KERNEL_SRC_DIR); fi
 
 kconfiglib:
 	mkdir $(KERNEL_SRC_DIR)/Kconfiglib
@@ -40,7 +40,7 @@ kconfiglib:
 	cd $(KERNEL_SRC_DIR) && patch -p1 <Kconfiglib/makefile.patch
 
 config: kconfiglib $(CONFIG_DEP)
-	cp configs/$(TARGET_ARCH).config $(KERNEL_SRC_DIR)/.config
+	cp $(CONFIG_DIR)/configs/$(TARGET_ARCH).config $(KERNEL_SRC_DIR)/.config
 
 build: $(BUILD_DIR) $(BUILD_DEP)
 	$(KMAKE) modules
