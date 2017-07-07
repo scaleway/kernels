@@ -1,5 +1,4 @@
-TARGET_CC ?= /usr/bin/aarch64-linux-gnu-
-KMAKE_CC := ARCH=arm64 CROSS_COMPILE=$(TARGET_CC)
+TARGET_CC_PREFIX ?= /usr/bin/aarch64-linux-gnu-
 BUILD_DEP += build-arm64
 PACK_DEP += pack-arm64
 
