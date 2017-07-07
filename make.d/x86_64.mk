@@ -1,5 +1,4 @@
-TARGET_CC ?= /usr/bin/
-KMAKE_CC := ARCH=x86_64 CROSS_COMPILE=$(TARGET_CC)
+TARGET_CC_PREFIX ?= /usr/bin/
 BUILD_DEP += build-x86_64
 PACK_DEP += pack-x86_64
 
