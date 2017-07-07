@@ -1,5 +1,4 @@
-TARGET_CC ?= /usr/bin/arm-linux-gnueabihf-
-KMAKE_CC := ARCH=arm CROSS_COMPILE=$(TARGET_CC)
+TARGET_CC_PREFIX ?= /usr/bin/arm-linux-gnueabihf-
 CONFIG_DEP += config-arm
 BUILD_DEP += build-arm
 PACK_DEP += pack-arm
