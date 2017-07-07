@@ -5,7 +5,6 @@ CONCURRENCY ?= $(shell nproc)
 PLATFORM_ARCH := $(shell uname -i)
 TARGET_ARCH ?= $(PLATFORM_ARCH)
 ARCH_UBUNTU := $(shell grep -w "$(TARGET_ARCH)" $(CONFIG_DIR)/architectures_map | cut -d':' -f2)
-KMAKE := $(MAKE) -C $(KERNEL_SRC_DIR) -j$(CONCURRENCY)
 
 CONFIG_DEP :=
 BUILD_DEP :=
@@ -13,9 +12,16 @@ PACK_DEP :=
 
 -include make.d/$(TARGET_ARCH).mk
 
-ifneq ($(PLATFORM_ARCH), $(TARGET_ARCH))
-KMAKE += $(KMAKE_CC)
+CC_PREFIX :=
+ifdef USE_DISTCC
+CC_PREFIX := distcc
 endif
+
+CROSS_COMPILE :=
+ifneq ($(PLATFORM_ARCH), $(TARGET_ARCH))
+CROSS_COMPILE := $(TARGET_CC_PREFIX)
+endif
+KMAKE := $(MAKE) -C $(KERNEL_SRC_DIR) -j$(CONCURRENCY) ARCH=$(TARGET_ARCH) CROSS_COMPILE=$(CROSS_COMPILE) CC='$(CC_PREFIX) $(CROSS_COMPILE)gcc'
 
 KVERSION= $(shell $(KMAKE) --no-print-directory kernelversion)
 
