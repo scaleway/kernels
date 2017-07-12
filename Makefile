@@ -1,7 +1,8 @@
 CONFIG_DIR := $(shell pwd)
 BUILD_DIR ?= $(CONFIG_DIR)/build
 RELEASE_DIR ?= $(CONFIG_DIR)/release
-CONCURRENCY ?= $(shell nproc)
+THREADS := $(shell nproc)
+CONCURRENCY ?= $(THREADS)
 PLATFORM_ARCH := $(shell uname -i)
 TARGET_ARCH ?= $(PLATFORM_ARCH)
 ARCH_UBUNTU := $(shell grep -w "$(TARGET_ARCH)" $(CONFIG_DIR)/architectures_map | cut -d':' -f2)
@@ -64,6 +65,6 @@ pack: $(RELEASE_DIR) $(PACK_DEP)
 	cd $(RELEASE_DIR) && tar -cf modules.tar modules
 	cd $(KERNEL_SRC_DIR) && cp System.map Module.symvers modules.* include/config/kernel.release $(RELEASE_DIR)/
 	cp $(KERNEL_SRC_DIR)/.config $(RELEASE_DIR)/config-$(KVERSION)
-	cd $(RELEASE_DIR) && tar -cJf linux.tar.xz *
+	cd $(RELEASE_DIR) && tar -cf * | xz -T $(THREADS) >linux.tar.xz
 
 linux: patch config build pack
