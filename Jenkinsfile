@@ -32,7 +32,7 @@ pipeline {
                 [$class: 'CloneOption', timeout: 60],
                 [$class: 'CleanBeforeCheckout']
               ],
-              userRemoteConfigs: [[url: "git://kernel.ubuntu.com/ubuntu/ubuntu-xenial.git" ]]
+              userRemoteConfigs: [[url: "git://kernel.ubuntu.com/ubuntu/ubuntu-zesty.git" ]]
             ])
           }
           sh "make -C '${WORKSPACE}' linux TARGET_ARCH=arm KERNEL_SRC_DIR='${WORKSPACE}/arm/kernel' BUILD_DIR='${WORKSPACE}/arm/build' RELEASE_DIR='${WORKSPACE}/arm/release'"
@@ -58,7 +58,7 @@ pipeline {
                 [$class: 'CloneOption', timeout: 60],
                 [$class: 'CleanBeforeCheckout']
               ],
-              userRemoteConfigs: [[url: "git://kernel.ubuntu.com/ubuntu/ubuntu-xenial.git" ]]
+              userRemoteConfigs: [[url: "git://kernel.ubuntu.com/ubuntu/ubuntu-zesty.git" ]]
             ])
           }
           sh "make -C '${WORKSPACE}' linux TARGET_ARCH=x86_64 KERNEL_SRC_DIR='${WORKSPACE}/x86_64/kernel' BUILD_DIR='${WORKSPACE}/x86_64/build' RELEASE_DIR='${WORKSPACE}/x86_64/release'"
@@ -84,7 +84,7 @@ pipeline {
                 [$class: 'CloneOption', timeout: 60],
                 [$class: 'CleanBeforeCheckout']
               ],
-              userRemoteConfigs: [[url: "git://kernel.ubuntu.com/ubuntu/ubuntu-xenial.git" ]]
+              userRemoteConfigs: [[url: "git://kernel.ubuntu.com/ubuntu/ubuntu-zesty.git" ]]
             ])
           }
           sh "make -C '${WORKSPACE}' linux TARGET_ARCH=arm64 KERNEL_SRC_DIR='${WORKSPACE}/arm64/kernel' BUILD_DIR='${WORKSPACE}/arm64/build' RELEASE_DIR='${WORKSPACE}/arm64/release'"
