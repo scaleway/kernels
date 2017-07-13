@@ -1,6 +1,6 @@
 pipeline {
   agent {
-    label 'master||worker'
+    label 'master'
   }
 
   parameters {
@@ -10,6 +10,7 @@ pipeline {
     booleanParam(name: 'noTest', defaultValue: false, description: 'Don\'t test the kernel')
     string(name: 'testServerType', defaultValue: '', description: 'Scaleway server type to test the kernel on')
     string(name: 'testImage', defaultValue: '', description: 'Scaleway image to test the kernel on')
+    booleanParam(name: 'needAdminApproval', defaultValue: false, description: 'Wait for admin approval after testing')
     booleanParam(name: 'noRelease', defaultValue: false, description: 'Don\'t release the kernel')
   }
 
@@ -30,19 +31,29 @@ pipeline {
           )
         }
         echo "Created test bootscript: ${bootscript}"
+        withCredentials([usernamePassword(credentialsId: 'scw-test-orga-token', usernameVariable: 'SCW_ORGANIZATION', passwordVariable: 'SCW_TOKEN')]) {
+          sh "./test_kernel.sh start ${bootscript} ${params.testServerType} ${params.testImage} server.id"
+        }
         script {
-          withCredentials([usernamePassword(credentialsId: 'scw-test-orga-token', usernameVariable: 'SCW_ORGANIZATION', passwordVariable: 'SCW_TOKEN')]) {
-            server = sh(
-              script: "./test_kernel.sh start ${bootscript} ${params.testServerType} ${params.testImage}",
-              returnStdout: true
-            ).trim()
+          serverId = readFile('server.id').trim()
+        }
+        echo "Server ${serverId} was booted and passed basic checks."
+        script {
+          if (params.needAdminApproval) {
+            input message: "Server ${serverId} was booted and passed basic checks. You can run some manual checks now. Confirm that the kernel stable ?", ok: 'Confirm'
           }
         }
-        input message: "Created server ${server}, please test it. Confirm that the kernel stable ?", ok: 'Confirm'
       }
       post {
         always {
-          sh "./test_kernel.sh stop ${server}"
+          script {
+            if (fileExists('server.id')) {
+              serverId = readFile('server.id').trim()
+            }
+            withCredentials([usernamePassword(credentialsId: 'scw-test-orga-token', usernameVariable: 'SCW_ORGANIZATION', passwordVariable: 'SCW_TOKEN')]) {
+              sh "./test_kernel.sh stop ${serverId}"
+            }
+          }
         }
       }
     }
