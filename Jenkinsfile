@@ -40,6 +40,13 @@ pipeline {
         echo "Server ${serverId} was booted and passed basic checks."
         script {
           if (params.needAdminApproval) {
+            emailext(
+              to: "jtamba@online.net",
+              subject: "Kernel test #${env.BUILD_NUMBER} needs admin approval",
+              body: """<p>A new version of kernel ${env.buildBranch} is being tested. Server ${serverId} has been started and has passed basic checks. You can ssh to it and do some manual checks.</p>
+              <p>If the kernel is fit for release, you can <a href="${env.JENKINS_URL}/blue/organizations/jenkins/kernel-release/detail/kernel-release/${env.BUILD_NUMBER}"> go to the pipeline</a> to confirm the build or otherwise abort it.</p>
+              """
+            )
             input message: "Server ${serverId} was booted and passed basic checks. You can run some manual checks now. Confirm that the kernel stable ?", ok: 'Confirm'
           }
         }
@@ -79,6 +86,34 @@ pipeline {
           deleteDir()
         }
       }
+    }
+  }
+  post {
+    success {
+      script {
+        if (params.noRelease == "false") {
+          bootscript = readFile "release/bootscript"
+          subject = "Kernel test ${env.buildBranch} #${env.BUILD_NUMBER} succeeded, kernel has been released"
+          body = """<p>Created bootscript for new ${env.buildBranch} kernel on ${env.arch}: ${bootscript}.</p><p>See full log <a href="${env.JENKINS_URL}/blue/organizations/jenkins/kernel-release/detail/kernel-release/${env.BUILD_NUMBER}">here</a></p>
+            """
+
+        } else {
+          subject = "Kernel test ${env.buildBranch} #${env.BUILD_NUMBER} succeeded"
+          body = """<p>See full log <a href="${env.JENKINS_URL}/blue/organizations/jenkins/kernel-release/detail/kernel-release/${env.BUILD_NUMBER}">here</a></p>"""
+        }
+      }
+      emailext(
+        to: "jtamba@online.net",
+        subject: subject,
+        body: body
+      )
+    }
+    failure {
+      emailext(
+        to: "jtamba@online.net",
+        subject: "Kernel test ${env.buildBranch} #${env.BUILD_NUMBER} failed",
+        body: """<p>See full log <a href="${env.JENKINS_URL}/blue/organizations/jenkins/kernel-release/detail/kernel-release/${env.BUILD_NUMBER}">here</a></p>"""
+      )
     }
   }
 }
