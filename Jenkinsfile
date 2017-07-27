@@ -3,6 +3,10 @@ pipeline {
     label 'x86_64&&distcc'
   }
 
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '1'))
+  }
+
   triggers {
     pollSCM("H */2 * * *")
   }
