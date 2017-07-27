@@ -23,9 +23,10 @@ CROSS_COMPILE := $(TARGET_CC_PREFIX)
 endif
 KMAKE := $(MAKE) -C $(KERNEL_SRC_DIR) -j$(CONCURRENCY) ARCH=$(TARGET_ARCH) CROSS_COMPILE=$(CROSS_COMPILE) CC='$(CC_PREFIX) $(CROSS_COMPILE)gcc'
 
-KVERSION= $(shell $(KMAKE) --no-print-directory kernelversion)
+KVERSION = $(shell $(KMAKE) --no-print-directory kernelversion)
+REVISION ?= 1
 
-KMAKE += LOCALVERSION="-mainline-latest"
+KMAKE += LOCALVERSION="-mainline-rev$(REVISION)"
 
 usage:
 	@echo "make linux TARGET_ARCH=... KERNEL_SRC_DIR=... [BUILD_DIR=...] [RELEASE_DIR=...] [CONCURRENCY=...]"
