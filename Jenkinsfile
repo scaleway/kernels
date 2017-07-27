@@ -17,8 +17,42 @@ pipeline {
   }
 
   stages {
+    stage('Checkout last kernel version') {
+      steps {
+        dir("kernel") {
+          checkout([
+            $class: 'GitSCM',
+            poll: true,
+            branches: [[name: 'master']],
+            extensions: [
+              [$class: 'CheckoutOption', timeout: 30],
+              [$class: 'CloneOption', timeout: 60],
+              [$class: 'CleanBeforeCheckout']
+            ],
+            userRemoteConfigs: [[url: "git://kernel.ubuntu.com/ubuntu/ubuntu-xenial.git" ]]
+          ])
+          script {
+            env.kernelVersion = sh(script: 'make kernelversion', returnStdout: true).trim()
+          }
+        }
+        echo "Building kernel version: ${env.kernelVersion}"
+      }
+    }
+    stage('Compute revision number') {
+      steps {
+        script {
+          withCredentials([usernamePassword(credentialsId: 'scw-test-orga-token', usernameVariable: 'SCW_ORGANIZATION', passwordVariable: 'SCW_TOKEN')]) {
+            env.kernelRevision = sh(script: "curl -G -s https://cp-par1.scaleway.com/bootscripts -d title='ubuntu xenial ${env.kernelVersion} rev' -H 'x-auth-token: ${SCW_TOKEN}' | jq -r '[ .bootscripts[].title | scan(\"rev[0-9]+\")[3:] | tonumber ] | max // 0 | . + 1'", returnStdout: true).trim()
+          }
+        }
+        echo "Kernel build revision: ${env.kernelRevision}"
+      }
+    }
     stage('Compile kernel: arm') {
       steps {
+        dir("kernel") {
+          sh 'git clean -ffdx && git reset --hard'
+        }
         dir("arm") {
           dir("release") {
             deleteDir()
@@ -26,25 +60,15 @@ pipeline {
           dir("build") {
             deleteDir()
           }
-          dir("kernel") {
-            checkout([
-              $class: 'GitSCM',
-              poll: true,
-              branches: [[name: 'master']],
-              extensions: [
-                [$class: 'CheckoutOption', timeout: 30],
-                [$class: 'CloneOption', timeout: 60],
-                [$class: 'CleanBeforeCheckout']
-              ],
-              userRemoteConfigs: [[url: "git://kernel.ubuntu.com/ubuntu/ubuntu-xenial.git" ]]
-            ])
-          }
-          sh "make -C '${WORKSPACE}' linux TARGET_ARCH=arm KERNEL_SRC_DIR='${WORKSPACE}/arm/kernel' BUILD_DIR='${WORKSPACE}/arm/build' RELEASE_DIR='${WORKSPACE}/arm/release'"
+          sh "make -C '${WORKSPACE}' linux TARGET_ARCH=arm REVISION=${env.kernelRevision} KERNEL_SRC_DIR='${WORKSPACE}/kernel' BUILD_DIR='${WORKSPACE}/arm/build' RELEASE_DIR='${WORKSPACE}/arm/release'"
         }
       }
     }
     stage('Compile kernel: x86_64') {
       steps {
+        dir("kernel") {
+          sh 'git clean -ffdx && git reset --hard'
+        }
         dir("x86_64") {
           dir("release") {
             deleteDir()
@@ -52,25 +76,15 @@ pipeline {
           dir("build") {
             deleteDir()
           }
-          dir("kernel") {
-            checkout([
-              $class: 'GitSCM',
-              poll: true,
-              branches: [[name: 'master']],
-              extensions: [
-                [$class: 'CheckoutOption', timeout: 30],
-                [$class: 'CloneOption', timeout: 60],
-                [$class: 'CleanBeforeCheckout']
-              ],
-              userRemoteConfigs: [[url: "git://kernel.ubuntu.com/ubuntu/ubuntu-xenial.git" ]]
-            ])
-          }
-          sh "make -C '${WORKSPACE}' linux TARGET_ARCH=x86_64 KERNEL_SRC_DIR='${WORKSPACE}/x86_64/kernel' BUILD_DIR='${WORKSPACE}/x86_64/build' RELEASE_DIR='${WORKSPACE}/x86_64/release'"
+          sh "make -C '${WORKSPACE}' linux TARGET_ARCH=x86_64 REVISION=${env.kernelRevision} KERNEL_SRC_DIR='${WORKSPACE}/kernel' BUILD_DIR='${WORKSPACE}/x86_64/build' RELEASE_DIR='${WORKSPACE}/x86_64/release'"
         }
       }
     }
     stage('Compile kernel: arm64') {
       steps {
+        dir("kernel") {
+          sh 'git clean -ffdx && git reset --hard'
+        }
         dir("arm64") {
           dir("release") {
             deleteDir()
@@ -78,20 +92,7 @@ pipeline {
           dir("build") {
             deleteDir()
           }
-          dir("kernel") {
-            checkout([
-              $class: 'GitSCM',
-              poll: true,
-              branches: [[name: 'master']],
-              extensions: [
-                [$class: 'CheckoutOption', timeout: 30],
-                [$class: 'CloneOption', timeout: 60],
-                [$class: 'CleanBeforeCheckout']
-              ],
-              userRemoteConfigs: [[url: "git://kernel.ubuntu.com/ubuntu/ubuntu-xenial.git" ]]
-            ])
-          }
-          sh "make -C '${WORKSPACE}' linux TARGET_ARCH=arm64 KERNEL_SRC_DIR='${WORKSPACE}/arm64/kernel' BUILD_DIR='${WORKSPACE}/arm64/build' RELEASE_DIR='${WORKSPACE}/arm64/release'"
+          sh "make -C '${WORKSPACE}' linux TARGET_ARCH=arm64 REVISION=${env.kernelRevision} KERNEL_SRC_DIR='${WORKSPACE}/kernel' BUILD_DIR='${WORKSPACE}/arm64/build' RELEASE_DIR='${WORKSPACE}/arm64/release'"
         }
       }
     }
@@ -103,12 +104,9 @@ pipeline {
   }
   post {
     success {
-      script {
-        env.kernel_version = readFile('x86_64/release/kernel.release')
-      }
       emailext(
         to: "jtamba@online.net",
-        subject: "Kernel build - ${env.JOB_NAME} #${env.BUILD_NUMBER}: ${env.kernel_version} available for release",
+        subject: "Kernel build - ${env.JOB_NAME} #${env.BUILD_NUMBER}: ${env.kernelVersion} available for release",
         body: """<p>Start a test and release job from <a href="${env.JENKINS_URL}/blue/organizations/jenkins/kernel-release">here</a></p>
           <p>Or start it directly with ubuntu on a <a href="${env.JENKINS_URL}/job/kernel-release/buildWithParameters?buildBranch=mainline%2Flatest&buildNumber=${env.BUILD_NUMBER}&arch=x86_64&testServerType=VC1S&testImage=ubuntu-xenial">VC1S</a>, a <a href="${env.JENKINS_URL}/job/kernel-release/buildWithParameters?buildBranch=mainline%2Flatest&buildNumber=${env.BUILD_NUMBER}&arch=arm&testServerType=C1&testImage=ubuntu-xenial">C1</a> or an <a href="${env.JENKINS_URL}/job/kernel-release/buildWithParameters?buildBranch=mainline%2Flatest&buildNumber=${env.BUILD_NUMBER}&arch=arm64&testServerType=ARM64-2GB&testImage=ubuntu-xenial">ARM64-2GB</a></p>
           <p>See the job <a href="${env.BUILD_URL}">here</a> (<a href="${env.BUILD_URL}/artifact">artifacts</a>)</p>
