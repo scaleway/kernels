@@ -3,6 +3,10 @@ pipeline {
     label 'master'
   }
 
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '15'))
+  }
+
   parameters {
     string(name: 'buildBranch', description: 'Kernel branch to test and release')
     string(name: 'buildNumber', description: 'Kernel-build run number to get artifacts from')
