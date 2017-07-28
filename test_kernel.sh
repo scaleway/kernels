@@ -35,7 +35,7 @@ test_start() {
     echo "Creating server..."
     maximum_create_tries=5
     for try in `seq 1 $maximum_create_tries`; do
-        _scw create --commercial-type="$commercial_type" --bootscript="$bootscript" --name="$server_name" --env="AUTHORIZED_KEY=$key" "$test_image"
+        _scw create --ip-address="none" --commercial-type="$commercial_type" --bootscript="$bootscript" --name="$server_name" --env="AUTHORIZED_KEY=$key" "$test_image"
         sleep 1
         if [ $(scw ps -a -q --filter="name=$server_name" | wc -l) -gt 0 ]; then
             break
@@ -83,7 +83,7 @@ test_start() {
         exit 2
     fi
     echo "Server booted"
-    server_ip=$(get_server $server_id $SCW_TOKEN | jq -r '.server.public_ip.address')
+    server_ip=$(get_server $server_id $SCW_TOKEN | jq -r '.server.private_ip')
 
     # Wait for ssh
     echo "Waiting for ssh to be available..."
