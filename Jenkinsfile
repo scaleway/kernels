@@ -12,8 +12,6 @@ pipeline {
     string(name: 'buildNumber', description: 'Kernel-build run number to get artifacts from')
     choice(name: 'arch', choices: 'arm\narm64\nx86_64', description: 'Arch to test and deploy kernel on')
     booleanParam(name: 'noTest', defaultValue: false, description: 'Don\'t test the kernel')
-    string(name: 'testServerType', defaultValue: '', description: 'Scaleway server type to test the kernel on')
-    string(name: 'testImage', defaultValue: '', description: 'Scaleway image to test the kernel on')
     booleanParam(name: 'needAdminApproval', defaultValue: false, description: 'Wait for admin approval after testing')
     booleanParam(name: 'noRelease', defaultValue: false, description: 'Don\'t release the kernel')
   }
@@ -24,11 +22,9 @@ pipeline {
         expression { params.noTest == false }
       }
       steps {
+        sh "./request_json.sh ${params.buildBranch} ${params.buildNumber} ${params.arch} test >message.json"
         script {
-          json_message = sh(
-            script: "./request_json.sh ${params.buildBranch} ${params.buildNumber} ${params.arch} test",
-            returnStdout: true
-          )
+          json_message = readFile('message.json').trim()
           bootscript = input(
             message: "${json_message}",
             parameters: [string(name: 'bootscript_id', description: 'ID of the created bootscript')]
@@ -36,34 +32,29 @@ pipeline {
         }
         echo "Created test bootscript: ${bootscript}"
         withCredentials([usernamePassword(credentialsId: 'scw-test-orga-token', usernameVariable: 'SCW_ORGANIZATION', passwordVariable: 'SCW_TOKEN')]) {
-          sh "./test_kernel.sh start ${bootscript} ${params.testServerType} ${params.testImage} server.id"
+          sh "./test_kernel.sh start ${env.arch} ${params.buildBranch} ${bootscript} servers_list"
         }
         script {
-          serverId = readFile('server.id').trim()
+          serverIds = readFile('servers_list').trim()
         }
-        echo "Server ${serverId} was booted and passed basic checks."
+        echo "The following servers have been booted and passed basic checks:\nTYPE NAME ID\n${serverIds}"
         script {
           if (params.needAdminApproval) {
             emailext(
               to: "jtamba@online.net",
               subject: "Kernel test #${env.BUILD_NUMBER} needs admin approval",
-              body: """<p>A new version of kernel ${env.buildBranch} is being tested. Server ${serverId} has been started and has passed basic checks. You can ssh to it and do some manual checks.</p>
+              body: """<p>A new version of kernel ${env.buildBranch} is being tested. The following servers have been booted and passed basic checks:\nTYPE NAME ID\n${serverIds}. You can ssh to it and do some manual checks.</p>
               <p>If the kernel is fit for release, you can <a href="${env.JENKINS_URL}/blue/organizations/jenkins/kernel-release/detail/kernel-release/${env.BUILD_NUMBER}"> go to the pipeline</a> to confirm the build or otherwise abort it.</p>
               """
             )
-            input message: "Server ${serverId} was booted and passed basic checks. You can run some manual checks now. Confirm that the kernel stable ?", ok: 'Confirm'
+            input message: "You can run some manual checks on the booted server(s). Confirm that the kernel stable ?", ok: 'Confirm'
           }
         }
       }
       post {
         always {
-          script {
-            if (fileExists('server.id')) {
-              serverId = readFile('server.id').trim()
-            }
-            withCredentials([usernamePassword(credentialsId: 'scw-test-orga-token', usernameVariable: 'SCW_ORGANIZATION', passwordVariable: 'SCW_TOKEN')]) {
-              sh "./test_kernel.sh stop ${serverId}"
-            }
+          withCredentials([usernamePassword(credentialsId: 'scw-test-orga-token', usernameVariable: 'SCW_ORGANIZATION', passwordVariable: 'SCW_TOKEN')]) {
+            sh "./test_kernel.sh stop servers_list"
           }
         }
       }
@@ -73,11 +64,9 @@ pipeline {
         expression { params.noRelease == false }
       }
       steps {
+        sh "./request_json.sh ${params.buildBranch} ${params.buildNumber} ${params.arch} release >message.json"
         script {
-          json_message = sh(
-            script: "./request_json.sh ${params.buildBranch} ${params.buildNumber} ${params.arch} release",
-            returnStdout: true
-          )
+          json_message = readFile('message.json').trim()
           bootscript = input(
             message: "${json_message}",
             parameters: [string(name: 'bootscript_id', description: 'ID of the created bootscript')]
@@ -118,6 +107,9 @@ pipeline {
         subject: "Kernel test ${env.buildBranch} #${env.BUILD_NUMBER} failed",
         body: """<p>See full log <a href="${env.JENKINS_URL}/blue/organizations/jenkins/kernel-release/detail/kernel-release/${env.BUILD_NUMBER}">here</a></p>"""
       )
+    }
+    always {
+      deleteDir()
     }
   }
 }

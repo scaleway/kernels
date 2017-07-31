@@ -12,7 +12,7 @@ _ssh() {
 }
 
 get_server() {
-    res=$(curl --fail -s https://api.scaleway.com/servers/$1 -H "x-auth-token: $2")
+    res=$(curl --fail -s https://api.scaleway.com/servers/$1 -H "x-auth-token: $SCW_TOKEN")
     if [ $? -ne 0 ]; then
         return 1
     else
@@ -20,122 +20,149 @@ get_server() {
     fi
 }
 
+get_image() {
+    curl --fail -s -G https://api.scaleway.com/images -d arch=$1 -d name="$2" -H "x-auth-token: $SCW_TOKEN" | jq -r '.images[0].id'
+}
+
 test_start() {
-    bootscript=$1
-    commercial_type=$2
-    test_image=$3
+    arch=$1
+    buildbranch=$2
+    IFS='/' read flavor version <<< $buildbranch
+    bootscript=$3
     server_id_file=$4
 
-    server_name="kernel-test-$(uuidgen -r)"
-    key=$(cat ~/.ssh/id_builder.pub | cut -d' ' -f1,2 | tr ' ' '_')
-
-    _scw login -o "$SCW_ORGANIZATION" -t "$SCW_TOKEN" -s
-
-    # Try to create the server
-    echo "Creating server..."
-    maximum_create_tries=5
-    for try in `seq 1 $maximum_create_tries`; do
-        _scw create --ip-address="none" --commercial-type="$commercial_type" --bootscript="$bootscript" --name="$server_name" --env="AUTHORIZED_KEY=$key" "$test_image"
-        sleep 1
-        if [ $(scw ps -a -q --filter="name=$server_name" | wc -l) -gt 0 ]; then
-            break
-        fi
-        backoff=$(echo "(2^($try-1))*60" | bc)
-        sleep $backoff
-    done
-    if ! [ $(scw ps -a -q --filter="name=$server_name" | wc -l) -gt 0 ]; then
-        echo "Could not create server"
+    if [ "$flavor" = "mainline" ]; then
+        test_image=$(get_image $arch "ubuntu xenial")
+    else
+        test_image=$(get_image $arch "$flavor $version")
+    fi
+    if [ -z "$test_image" ]; then
+        echo "No image found for this kernel."
         exit 1
     fi
-    server_id=$(scw ps -a -q --filter="name=$server_name")
-    echo "Created server $server_name, id: $server_id"
-    echo $server_id >$server_id_file
 
-    # Try to boot the server
-    echo "Booting server..."
-    maximum_boot_tries=3
-    boot_timeout=600
-    for try in `seq 1 $maximum_boot_tries`; do
-        if (get_server $server_id $SCW_TOKEN | jq -r '.server.state' | grep -qxE 'stopped'); then
-            _scw start $server_id
-        fi
-        sleep 1
-        if (get_server $server_id $SCW_TOKEN | jq -r '.server.state' | grep -qxE 'starting'); then
-            time_begin=$(date +%s)
-            while (get_server $server_id $SCW_TOKEN | jq -r '.server.state' | grep -qxE 'starting') ; do
-                time_now=$(date +%s)
-                time_diff=$(echo "$time_now-$time_begin" | bc)
-                if [ $time_diff -gt $boot_timeout ]; then
-                    break
-                fi
-                sleep 5
-            done
-        fi
-        sleep 1
-        if (get_server $server_id $SCW_TOKEN | jq -r '.server.state' | grep -qxE 'running'); then
-            break
-        fi
-        backoff=$(echo "($try-1)*60" | bc)
-        sleep $backoff
-    done
-    if ! (get_server $server_id $SCW_TOKEN | jq -r '.server.state' | grep -qxE 'running'); then
-        echo "Could not boot server"
-        exit 2
-    fi
-    echo "Server booted"
-    server_ip=$(get_server $server_id $SCW_TOKEN | jq -r '.server.private_ip')
+    _scw login -o "$SCW_ORGANIZATION" -t "$SCW_TOKEN" -s
+    key=$(cat ~/.ssh/id_builder.pub | cut -d' ' -f1,2 | tr ' ' '_')
 
-    # Wait for ssh
-    echo "Waiting for ssh to be available..."
-    ssh_up_timeout=300
-    time_begin=$(date +%s)
-    while ! nc -zv $server_ip 22 >/dev/null 2>&1; do
-        time_now=$(date +%s)
-        time_diff=$(echo "$time_now-$time_begin" | bc)
-        if [ $time_diff -gt $ssh_up_timeout ]; then
+    server_types=$(grep -E "$arch\>" server_types | cut -d'|' -f2 | tr ',' ' ')
+    : > $server_id_file
+
+    for server_type in $server_types; do
+        server_name="kernel-test-$(uuidgen -r)"
+
+        # Try to create the server
+        echo "Creating $server_type server $server_name..."
+        maximum_create_tries=5
+        for try in `seq 1 $maximum_create_tries`; do
+            _scw create --ip-address="none" --commercial-type="$server_type" --bootscript="$bootscript" --name="$server_name" --env="AUTHORIZED_KEY=$key" "$test_image"
+            sleep 1
+            if [ $(scw ps -a -q --filter="name=$server_name" | wc -l) -gt 0 ]; then
+                break
+            fi
+            backoff=$(echo "(2^($try-1))*60" | bc)
+            sleep $backoff
+        done
+        if ! [ $(scw ps -a -q --filter="name=$server_name" | wc -l) -gt 0 ]; then
+            echo "Could not create server"
+            exit 1
+        fi
+        server_id=$(scw ps -a -q --filter="name=$server_name")
+        echo "Created server $server_name, id: $server_id"
+        echo "$server_type $server_name $server_id" >> $server_id_file
+
+        # Try to boot the server
+        echo "Booting server $server_name..."
+        maximum_boot_tries=3
+        boot_timeout=600
+        for try in `seq 1 $maximum_boot_tries`; do
+            if (get_server $server_id | jq -r '.server.state' | grep -qxE 'stopped'); then
+                _scw start $server_id
+            fi
+            sleep 1
+            if (get_server $server_id | jq -r '.server.state' | grep -qxE 'starting'); then
+                time_begin=$(date +%s)
+                while (get_server $server_id | jq -r '.server.state' | grep -qxE 'starting') ; do
+                    time_now=$(date +%s)
+                    time_diff=$(echo "$time_now-$time_begin" | bc)
+                    if [ $time_diff -gt $boot_timeout ]; then
+                        break
+                    fi
+                    sleep 5
+                done
+            fi
+            sleep 1
+            if (get_server $server_id | jq -r '.server.state' | grep -qxE 'running'); then
+                break
+            fi
+            backoff=$(echo "($try-1)*60" | bc)
+            sleep $backoff
+        done
+        if ! (get_server $server_id | jq -r '.server.state' | grep -qxE 'running'); then
+            echo "Could not boot server"
+            exit 2
+        fi
+        echo "Server $server_name booted"
+        server_ip=$(get_server $server_id | jq -r '.server.private_ip')
+
+        # Wait for ssh
+        echo "Waiting for ssh to be available on server $server_name..."
+        ssh_up_timeout=300
+        time_begin=$(date +%s)
+        while ! nc -zv $server_ip 22 >/dev/null 2>&1; do
+            time_now=$(date +%s)
+            time_diff=$(echo "$time_now-$time_begin" | bc)
+            if [ $time_diff -gt $ssh_up_timeout ]; then
+                echo "Failed testing server, could not detect a listening sshd"
+                exit 3
+            fi
+            sleep 1
+        done
+
+        # Do some simple tests on the server
+        echo "Testing kernel on server $server_name..."
+        if ! _ssh root@$server_ip uname -a; then
+            echo "Failed testing server, could not execute remote command"
             exit 3
         fi
-        sleep 1
+        echo "Done testing server $server_name with success"
     done
-
-    # Do some simple tests on the server
-    echo "Testing kernel on server $server_name..."
-    if ! _ssh root@$server_ip uname -a; then
-        exit 3
-    fi
-    echo "Done"
 }
 
 test_stop() {
-    server_id=$1
+    server_id_file=$1
 
     _scw login -o "$SCW_ORGANIZATION" -t "$SCW_TOKEN" -s
 
-    echo "Removing server..."
-    maximum_rm_tries=3
-    for try in `seq 1 $maximum_rm_tries`; do
-        if (get_server $server_id $SCW_TOKEN | jq -r '.server.state' | grep -qxE 'running'); then
-            _scw stop -t $server_id
+    failed=false
+    grep -v "^$" $server_id_file | while read server_type server_name server_id; do
+        echo "Removing $server_type server $server_name..."
+        maximum_rm_tries=3
+        for try in `seq 1 $maximum_rm_tries`; do
+            if (get_server $server_id | jq -r '.server.state' | grep -qxE 'running'); then
+                _scw stop -t $server_id
+            fi
+            sleep 1
+            if (get_server $server_id | jq -r '.server.state' | grep -qxE 'stopping'); then
+                _scw wait $server_id
+            fi
+            sleep 1
+            if (get_server $server_id | jq -r '.server.state' | grep -qxE 'stopped'); then
+                _scw rm $server_id
+            fi
+            if ! (get_server $server_id); then
+                break
+            fi
+            backoff=$(echo "($try-1)*60" | bc)
+            sleep $backoff
+        done
+        if (get_server $server_id); then
+            echo "Could not stop and remove server $server_name"
+            failed=true
+        else
+            echo "Server $server_name removed"
         fi
-        sleep 1
-        if (get_server $server_id $SCW_TOKEN | jq -r '.server.state' | grep -qxE 'stopping'); then
-            _scw wait $server_id
-        fi
-        sleep 1
-        if (get_server $server_id $SCW_TOKEN | jq -r '.server.state' | grep -qxE 'stopped'); then
-            _scw rm $server_id
-        fi
-        if ! (get_server $server_id $SCW_TOKEN); then
-            break
-        fi
-        backoff=$(echo "($try-1)*60" | bc)
-        sleep $backoff
     done
-    if (get_server $server_id $SCW_TOKEN); then
-        echo "Could not stop and remove server"
-        exit 1
-    fi
-    echo "Server removed"
+    if $failed; then exit 1; fi
 }
 
 test_$action "$@"
