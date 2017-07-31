@@ -58,11 +58,11 @@ build: $(BUILD_DIR) $(BUILD_DEP)
 
 pack: $(RELEASE_DIR) $(PACK_DEP)
 	@echo $(KVERSION) >$(RELEASE_DIR)/version
-	cd $(BUILD_DIR) && tar -cf $(RELEASE_DIR)/include.tar include/*
+	cd $(BUILD_DIR) && tar --owner=0 --group=0 -cf $(RELEASE_DIR)/include.tar include/*
 	cp -r $(BUILD_DIR)/lib/modules $(RELEASE_DIR)/modules
-	cd $(RELEASE_DIR) && tar -cf modules.tar modules
+	cd $(RELEASE_DIR) && tar --owner=0 --group=0 -cf modules.tar modules
 	cd $(KERNEL_SRC_DIR) && cp System.map Module.symvers modules.* include/config/kernel.release $(RELEASE_DIR)/
 	cp $(KERNEL_SRC_DIR)/.config $(RELEASE_DIR)/config-$(KVERSION)
-	cd $(RELEASE_DIR) && tar -c * | xz -T $(THREADS) >linux.tar.xz
+	cd $(RELEASE_DIR) && tar --owner=0 --group=0 -c * | xz -T $(THREADS) >linux.tar.xz
 
 linux: patch config build pack
