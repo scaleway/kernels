@@ -7,5 +7,6 @@ build-x86_64:
 
 pack-x86_64:
 	cp $(KERNEL_SRC_DIR)/arch/x86_64/boot/bzImage $(RELEASE_DIR)/
-	cd $(RELEASE_DIR) && cp bzImage bzImage-$(KVERSION)
-	cd $(RELEASE_DIR) && cp bzImage vmlinuz-$(KVERSION)
+	cd $(RELEASE_DIR) && ln -sr bzImage bzImage-$(KVERSION)
+	cd $(RELEASE_DIR) && ln -sr bzImage vmlinuz
+	cd $(RELEASE_DIR) && ln -sr bzImage vmlinuz-$(KVERSION)
