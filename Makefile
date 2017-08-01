@@ -65,7 +65,8 @@ pack: $(RELEASE_DIR) $(PACK_DEP)
 	cp -r $(BUILD_DIR)/lib/modules $(RELEASE_DIR)/modules
 	cd $(RELEASE_DIR) && tar --owner=0 --group=0 -cf modules.tar modules
 	cd $(KERNEL_SRC_DIR) && cp System.map Module.symvers modules.* include/config/kernel.release $(RELEASE_DIR)/
-	cp $(KERNEL_SRC_DIR)/.config $(RELEASE_DIR)/config-$(KVERSION)
+	cp $(KERNEL_SRC_DIR)/.config $(RELEASE_DIR)/config
+	cd $(RELEASE_DIR) && ln -sr config config-$(KVERSION)
 	cd $(RELEASE_DIR) && tar --owner=0 --group=0 -c * | xz -T $(THREADS) >linux.tar.xz
 
 linux: patch config build pack
