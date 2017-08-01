@@ -13,10 +13,11 @@ build-arm:
 
 pack-arm:
 	cp $(KERNEL_SRC_DIR)/arch/arm/boot/uImage $(RELEASE_DIR)/
-	cd $(RELEASE_DIR) && cp uImage uImage-$(KVERSION)
+	cd $(RELEASE_DIR) && ln -sr uImage uImage-$(KVERSION)
 	cp $(KERNEL_SRC_DIR)/arch/arm/boot/zImage $(RELEASE_DIR)/
-	cd $(RELEASE_DIR) && cp zImage zImage-$(KVERSION)
+	cd $(RELEASE_DIR) && ln -sr zImage zImage-$(KVERSION)
+	cd $(RELEASE_DIR) && ln -sr zImage vmlinuz
+	cd $(RELEASE_DIR) && ln -sr zImage vmlinuz-$(KVERSION)
 	cp $(KERNEL_SRC_DIR)/arch/arm/boot/Image $(RELEASE_DIR)/
-	cd $(RELEASE_DIR) && cp Image Image-$(KVERSION)
+	cd $(RELEASE_DIR) && ln -sr Image Image-$(KVERSION)
 	cp $(KERNEL_SRC_DIR)/arch/arm/boot/dts/scaleway-c1.dtb $(RELEASE_DIR)/
-	cd $(RELEASE_DIR) && cp uImage vmlinuz-$(KVERSION)
