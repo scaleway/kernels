@@ -7,4 +7,5 @@ build-arm64:
 
 pack-arm64:
 	cp $(KERNEL_SRC_DIR)/arch/arm64/boot/Image $(RELEASE_DIR)/
-	cd $(RELEASE_DIR) && cp Image vmlinux-$(KVERSION)
+	cd $(RELEASE_DIR) && ln -sr Image vmlinux
+	cd $(RELEASE_DIR) && ln -sr Image vmlinux-$(KVERSION)
