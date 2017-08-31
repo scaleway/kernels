@@ -80,6 +80,22 @@ pipeline {
         }
       }
     }
+    stage('Compile kernel: arm64') {
+      steps {
+        dir("kernel") {
+          sh 'git clean -ffdx && git reset --hard'
+        }
+        dir("arm64") {
+          dir("release") {
+            deleteDir()
+          }
+          dir("build") {
+            deleteDir()
+          }
+          sh "make -C '${WORKSPACE}' linux TARGET_ARCH=arm64 REVISION=${env.kernelRevision} KERNEL_SRC_DIR='${WORKSPACE}/kernel' BUILD_DIR='${WORKSPACE}/arm64/build' RELEASE_DIR='${WORKSPACE}/arm64/release'"
+        }
+      }
+    }
     stage('Archive kernels') {
       steps {
         archive includes: '*/release/**'
