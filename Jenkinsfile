@@ -23,7 +23,7 @@ pipeline {
           checkout([
             $class: 'GitSCM',
             poll: true,
-            branches: [[name: 'linux-4.11.y']],
+            branches: [[name: 'linux-4.12.y']],
             extensions: [
               [$class: 'CheckoutOption', timeout: 30],
               [$class: 'CloneOption', timeout: 60],
