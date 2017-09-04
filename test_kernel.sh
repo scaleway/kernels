@@ -21,7 +21,7 @@ get_server() {
 }
 
 get_image() {
-    curl --fail -s -G https://api.scaleway.com/images -d arch=$1 -d name="$2" -H "x-auth-token: $SCW_TOKEN" | jq -r '.images[0].id'
+    curl --fail -s https://api-marketplace.scaleway.com/images | jq -r --arg arch "$1" --arg img "$2" '.images[] | select(.name | test($img; "i")).versions[0].local_images[] | select(.arch == $arch and .zone == "par1").id'
 }
 
 test_start() {
@@ -32,10 +32,11 @@ test_start() {
     server_id_file=$4
 
     if [ "$flavor" = "mainline" ]; then
-        test_image=$(get_image $arch "ubuntu xenial")
+        image_name="ubuntu xenial"
     else
-        test_image=$(get_image $arch "$flavor $version")
+        image_name="$flavor $version"
     fi
+    test_image=$(get_image $arch "$image_name")
     if [ -z "$test_image" ]; then
         echo "No image found for this kernel."
         exit 1
