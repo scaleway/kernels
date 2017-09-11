@@ -23,7 +23,7 @@ pipeline {
           checkout([
             $class: 'GitSCM',
             poll: true,
-            branches: [[name: 'linux-4.12.y']],
+            branches: [[name: 'linux-4.13.y']],
             extensions: [
               [$class: 'CheckoutOption', timeout: 30],
               [$class: 'CloneOption', timeout: 60],
@@ -46,22 +46,6 @@ pipeline {
           }
         }
         echo "Kernel build revision: ${env.kernelRevision}"
-      }
-    }
-    stage('Compile kernel: arm') {
-      steps {
-        dir("kernel") {
-          sh 'git clean -ffdx && git reset --hard'
-        }
-        dir("arm") {
-          dir("release") {
-            deleteDir()
-          }
-          dir("build") {
-            deleteDir()
-          }
-          sh "make -C '${WORKSPACE}' linux TARGET_ARCH=arm REVISION=${env.kernelRevision} KERNEL_SRC_DIR='${WORKSPACE}/kernel' BUILD_DIR='${WORKSPACE}/arm/build' RELEASE_DIR='${WORKSPACE}/arm/release'"
-        }
       }
     }
     stage('Compile kernel: x86_64') {
