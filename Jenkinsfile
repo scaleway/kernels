@@ -29,7 +29,7 @@ pipeline {
               [$class: 'CloneOption', timeout: 60],
               [$class: 'CleanBeforeCheckout']
             ],
-            userRemoteConfigs: [[url: "git://kernel.ubuntu.com/ubuntu/ubuntu-xenial.git" ]]
+            userRemoteConfigs: [[url: "git://kernel.ubuntu.com/ubuntu/ubuntu-zesty.git" ]]
           ])
           script {
             env.kernelVersion = sh(script: 'make kernelversion', returnStdout: true).trim()
@@ -42,7 +42,7 @@ pipeline {
       steps {
         script {
           withCredentials([usernamePassword(credentialsId: 'scw-test-orga-token', usernameVariable: 'SCW_ORGANIZATION', passwordVariable: 'SCW_TOKEN')]) {
-            env.kernelRevision = sh(script: "curl -G -s https://cp-par1.scaleway.com/bootscripts -d title='ubuntu xenial ${env.kernelVersion} rev' -H 'x-auth-token: ${SCW_TOKEN}' | jq -r '[ .bootscripts[].title | scan(\"rev[0-9]+\")[3:] | tonumber ] | max // 0 | . + 1'", returnStdout: true).trim()
+            env.kernelRevision = sh(script: "curl -G -s https://cp-par1.scaleway.com/bootscripts -d title='ubuntu zesty ${env.kernelVersion} rev' -H 'x-auth-token: ${SCW_TOKEN}' | jq -r '[ .bootscripts[].title | scan(\"rev[0-9]+\")[3:] | tonumber ] | max // 0 | . + 1'", returnStdout: true).trim()
           }
         }
         echo "Kernel build revision: ${env.kernelRevision}"
@@ -108,7 +108,7 @@ pipeline {
         to: "jtamba@online.net",
         subject: "Kernel build - ${env.JOB_NAME} #${env.BUILD_NUMBER}: ${env.kernelVersion} available for release",
         body: """<p>Start a test and release job from <a href="${env.JENKINS_URL}/blue/organizations/jenkins/kernel-release">here</a></p>
-          <p>Or start it directly with ubuntu on a <a href="${env.JENKINS_URL}/job/kernel-release/buildWithParameters?buildBranch=mainline%2Flatest&buildNumber=${env.BUILD_NUMBER}&arch=x86_64&testServerType=VC1S&testImage=ubuntu-xenial">VC1S</a>, a <a href="${env.JENKINS_URL}/job/kernel-release/buildWithParameters?buildBranch=mainline%2Flatest&buildNumber=${env.BUILD_NUMBER}&arch=arm&testServerType=C1&testImage=ubuntu-xenial">C1</a> or an <a href="${env.JENKINS_URL}/job/kernel-release/buildWithParameters?buildBranch=mainline%2Flatest&buildNumber=${env.BUILD_NUMBER}&arch=arm64&testServerType=ARM64-2GB&testImage=ubuntu-xenial">ARM64-2GB</a></p>
+          <p>Or start it directly with ubuntu on a <a href="${env.JENKINS_URL}/job/kernel-release/buildWithParameters?buildBranch=mainline%2Flatest&buildNumber=${env.BUILD_NUMBER}&arch=x86_64&testServerType=VC1S&testImage=ubuntu-zesty">VC1S</a>, a <a href="${env.JENKINS_URL}/job/kernel-release/buildWithParameters?buildBranch=mainline%2Flatest&buildNumber=${env.BUILD_NUMBER}&arch=arm&testServerType=C1&testImage=ubuntu-zesty">C1</a> or an <a href="${env.JENKINS_URL}/job/kernel-release/buildWithParameters?buildBranch=mainline%2Flatest&buildNumber=${env.BUILD_NUMBER}&arch=arm64&testServerType=ARM64-2GB&testImage=ubuntu-zesty">ARM64-2GB</a></p>
           <p>See the job <a href="${env.BUILD_URL}">here</a> (<a href="${env.BUILD_URL}/artifact">artifacts</a>)</p>
           """
       )

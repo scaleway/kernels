@@ -27,7 +27,7 @@ KMAKE := $(MAKE) -C $(KERNEL_SRC_DIR) -j$(CONCURRENCY) ARCH=$(TARGET_ARCH) CROSS
 KVERSION = $(shell $(KMAKE) --no-print-directory kernelversion)
 REVISION ?= 1
 
-KMAKE += LOCALVERSION="-ubuntu-xenial-rev$(REVISION)"
+KMAKE += LOCALVERSION="-ubuntu-zesty-rev$(REVISION)"
 
 usage:
 	@echo "make linux TARGET_ARCH=... KERNEL_SRC_DIR=... [BUILD_DIR=...] [RELEASE_DIR=...] [CONCURRENCY=...]"
