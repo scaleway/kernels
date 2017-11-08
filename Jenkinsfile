@@ -1,3 +1,15 @@
+def jenkins_url = new JenkinsLocationConfiguration().getUrl()
+def kernel_build = new groovy.json.JsonSlurperClassic().parseText(new URL("${jenkins_url}/job/kernel-build/api/json").getText());
+def branches = [:]
+def branch_names = []
+def branch_name = ""
+for (Map branch : kernel_build['jobs']) {
+  branch_name = URLDecoder.decode(branch['name'], "UTF-8")
+  branches.put(branch_name, branch['url'])
+  branch_names.add(branch_name)
+}
+def branches_choice = branch_names.join('\n')
+
 pipeline {
   agent {
     label 'master'
@@ -8,10 +20,10 @@ pipeline {
   }
 
   parameters {
-    string(name: 'buildBranch', description: 'Kernel branch to test and release')
+    choice(name: 'buildBranch', choices: branches_choice, description: 'Kernel branch to test and release')
     choice(name: 'arch', choices: 'arm\narm64\nx86_64', description: 'Arch to test and deploy kernel on')
     booleanParam(name: 'noTest', defaultValue: false, description: 'Don\'t test the kernel')
-    booleanParam(name: 'needAdminApproval', defaultValue: false, description: 'Wait for admin approval after testing')
+    booleanParam(name: 'needsAdminApproval', defaultValue: false, description: 'Wait for admin approval after testing')
     booleanParam(name: 'noRelease', defaultValue: false, description: 'Don\'t release the kernel')
   }
 
@@ -21,11 +33,21 @@ pipeline {
         expression { params.noTest == false }
       }
       steps {
-        sh "./request_json.sh ${params.buildBranch} ${params.arch} test >message.json"
         script {
-          json_message = readFile('message.json').trim()
+          urlenc_branch = URLEncoder.encode(URLEncoder.encode(params.buildBranch, "UTF-8"), "UTF-8")
+          bootscript_request = groovy.json.JsonOutput.toJson([
+            type: "bootscript",
+            options: [
+              test: true
+            ],
+            data: [
+              release_path: "/job/kernel-build/job/${urlenc_branch}/lastSuccessfulBuild/artifact/${params.arch}/release",
+              arch: params.arch,
+              branch: params.buildBranch
+            ]
+          ])
           bootscript = input(
-            message: "${json_message}",
+            message: bootscript_request,
             parameters: [string(name: 'bootscript_id', description: 'ID of the created bootscript')]
           )
         }
@@ -34,19 +56,24 @@ pipeline {
           sh "./test_kernel.sh start ${env.arch} ${params.buildBranch} ${bootscript} servers_list"
         }
         script {
-          serverIds = readFile('servers_list').trim()
-        }
-        echo "The following servers have been booted and passed basic checks:\nTYPE NAME ID\n${serverIds}"
-        script {
-          if (params.needAdminApproval) {
+          servers_info = readFile('servers_list').trim().split('\n')
+          servers_booted = ["The following servers have been booted and passed basic checks:"]
+          servers_booted.add(["TYPE".padRight(10), "NAME".padRight(50), "ID".padRight(36)].join("| "))
+          servers_booted.add([''.padRight(10, '-'), ''.padRight(50, '-'), ''.padRight(36, '-')].join("|-"))
+          for (String server_info : servers_info) {
+            info = server_info.split(' ')
+            servers_booted.add([info[0].padRight(10), info[1].padRight(50), info[2].padRight(36)].join("| "))
+          }
+          echo servers_booted.join('\n')
+          if (params.needsAdminApproval) {
+            input message: "You can run some manual checks on the booted server(s). Confirm that the kernel stable ?", ok: 'Confirm'
             emailext(
               to: "jtamba@online.net",
               subject: "Kernel test #${env.BUILD_NUMBER} needs admin approval",
-              body: """<p>A new version of kernel ${env.buildBranch} is being tested. The following servers have been booted and passed basic checks:\nTYPE NAME ID\n${serverIds}. You can ssh to it and do some manual checks.</p>
+              body: """<p>A new version of kernel ${env.buildBranch} is being tested.\n ${servers_booted}\n You can ssh into the test server(s) and do some manual checks.</p>
               <p>If the kernel is fit for release, you can <a href="${env.JENKINS_URL}/blue/organizations/jenkins/kernel-release/detail/kernel-release/${env.BUILD_NUMBER}"> go to the pipeline</a> to confirm the build or otherwise abort it.</p>
               """
             )
-            input message: "You can run some manual checks on the booted server(s). Confirm that the kernel stable ?", ok: 'Confirm'
           }
         }
       }
@@ -63,11 +90,21 @@ pipeline {
         expression { params.noRelease == false }
       }
       steps {
-        sh "./request_json.sh ${params.buildBranch} ${params.arch} release >message.json"
         script {
-          json_message = readFile('message.json').trim()
+          urlenc_branch = URLEncoder.encode(URLEncoder.encode(params.buildBranch, "UTF-8"), "UTF-8")
+          bootscript_request = groovy.json.JsonOutput.toJson([
+            type: "bootscript",
+            options: [
+              test: false
+            ],
+            data: [
+              release_path: "/job/kernel-build/job/${urlenc_branch}/lastSuccessfulBuild/artifact/${params.arch}/release",
+              arch: params.arch,
+              branch: params.buildBranch
+            ]
+          ])
           bootscript = input(
-            message: "${json_message}",
+            message: bootscript_request,
             parameters: [string(name: 'bootscript_id', description: 'ID of the created bootscript')]
           )
         }
@@ -112,4 +149,3 @@ pipeline {
     }
   }
 }
-
