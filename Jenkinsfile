@@ -9,7 +9,6 @@ pipeline {
 
   parameters {
     string(name: 'buildBranch', description: 'Kernel branch to test and release')
-    string(name: 'buildNumber', description: 'Kernel-build run number to get artifacts from')
     choice(name: 'arch', choices: 'arm\narm64\nx86_64', description: 'Arch to test and deploy kernel on')
     booleanParam(name: 'noTest', defaultValue: false, description: 'Don\'t test the kernel')
     booleanParam(name: 'needAdminApproval', defaultValue: false, description: 'Wait for admin approval after testing')
@@ -22,7 +21,7 @@ pipeline {
         expression { params.noTest == false }
       }
       steps {
-        sh "./request_json.sh ${params.buildBranch} ${params.buildNumber} ${params.arch} test >message.json"
+        sh "./request_json.sh ${params.buildBranch} ${params.arch} test >message.json"
         script {
           json_message = readFile('message.json').trim()
           bootscript = input(
@@ -64,7 +63,7 @@ pipeline {
         expression { params.noRelease == false }
       }
       steps {
-        sh "./request_json.sh ${params.buildBranch} ${params.buildNumber} ${params.arch} release >message.json"
+        sh "./request_json.sh ${params.buildBranch} ${params.arch} release >message.json"
         script {
           json_message = readFile('message.json').trim()
           bootscript = input(
