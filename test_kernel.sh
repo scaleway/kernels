@@ -6,7 +6,8 @@ shift
 _scw() {
     output=$(scw "$@" 2>&1)
     if [ $? -ne 0 ]; then
-        echo "Error, Scaleway CLI returned:\n$output" >&2
+        echo "Error, Scaleway CLI returned:" >&2
+        echo "$output" >&2
     fi
 }
 
@@ -77,39 +78,28 @@ test_start() {
 
         # Try to boot the server
         echo "Booting server $server_name..."
-        maximum_boot_tries=3
+        time_begin=$(date +%s)
         boot_timeout=600
-        for try in `seq 1 $maximum_boot_tries`; do
-            if (get_server $server_id | jq -r '.server.state' | grep -qxE 'stopped'); then
-                _scw start $server_id
+        while true; do
+            time_elapsed=$(echo "$(date +%s)-$time_begin" | bc)
+            if [ $time_elapsed -gt $boot_timeout ]; then
+                echo "Could not boot server" >&2
+                exit 2
+            else
+                server_info=$(get_server $server_id)
+                server_state=$(echo $server_info | jq -r '.server.state')
+                if [ "$server_state" = "stopped" ]; then
+                    _scw start $server_id
+                elif [ "$server_state" = "starting" ]; then
+                    sleep 30
+                elif [ "$server_state" = "running" ]; then
+                    break
+                else
+                    continue
+                fi
             fi
             sleep 1
-            if (get_server $server_id | jq -r '.server.state' | grep -qxE 'starting'); then
-                echo "Server is starting."
-                time_begin=$(date +%s)
-                while (get_server $server_id | jq -r '.server.state' | grep -qxE 'starting') ; do
-                    time_now=$(date +%s)
-                    time_diff=$(echo "$time_now-$time_begin" | bc)
-                    if [ $time_diff -gt $boot_timeout ]; then
-                        echo "Waited $boot_timeout seconds for server to boot, aborting." >&2
-                        break
-                    fi
-                    sleep 5
-                done
-            fi
-            sleep 1
-            if (get_server $server_id | jq -r '.server.state' | grep -qxE 'running'); then
-                echo "Server has been started."
-                break
-            fi
-            backoff=$(echo "($try-1)*60" | bc)
-            echo "Retrying after backoff $backoff seconds." >&2
-            sleep $backoff
         done
-        if ! (get_server $server_id | jq -r '.server.state' | grep -qxE 'running'); then
-            echo "Could not boot server"
-            exit 2
-        fi
         echo "Server $server_name booted"
         server_ip=$(get_server $server_id | jq -r '.server.private_ip')
 
