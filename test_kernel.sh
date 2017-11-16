@@ -4,7 +4,10 @@ action=$1
 shift
 
 _scw() {
-    scw "$@" >/dev/null 2>&1
+    output=$(scw "$@" 2>&1)
+    if [ $? -ne 0 ]; then
+        echo "Error, Scaleway CLI returned:\n$output" >&2
+    fi
 }
 
 _ssh() {
@@ -14,6 +17,7 @@ _ssh() {
 get_server() {
     res=$(curl --fail -s https://api.scaleway.com/servers/$1 -H "x-auth-token: $SCW_TOKEN")
     if [ $? -ne 0 ]; then
+        echo "Error, Scaleway API returned:\n$res" >&2
         return 1
     else
         echo $res
@@ -81,11 +85,13 @@ test_start() {
             fi
             sleep 1
             if (get_server $server_id | jq -r '.server.state' | grep -qxE 'starting'); then
+                echo "Server is starting."
                 time_begin=$(date +%s)
                 while (get_server $server_id | jq -r '.server.state' | grep -qxE 'starting') ; do
                     time_now=$(date +%s)
                     time_diff=$(echo "$time_now-$time_begin" | bc)
                     if [ $time_diff -gt $boot_timeout ]; then
+                        echo "Waited $boot_timeout seconds for server to boot, aborting." >&2
                         break
                     fi
                     sleep 5
@@ -93,9 +99,11 @@ test_start() {
             fi
             sleep 1
             if (get_server $server_id | jq -r '.server.state' | grep -qxE 'running'); then
+                echo "Server has been started."
                 break
             fi
             backoff=$(echo "($try-1)*60" | bc)
+            echo "Retrying after backoff $backoff seconds." >&2
             sleep $backoff
         done
         if ! (get_server $server_id | jq -r '.server.state' | grep -qxE 'running'); then
