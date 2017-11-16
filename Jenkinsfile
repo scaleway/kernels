@@ -35,13 +35,15 @@ pipeline {
       steps {
         script {
           urlenc_branch = URLEncoder.encode(URLEncoder.encode(params.buildBranch, "UTF-8"), "UTF-8")
+          last_success = new groovy.json.JsonSlurperClassic().parseText(new URL("${jenkins_url}/job/kernel-build/job/${urlenc_branch}/lastSuccessfulBuild/api/json").getText())
+          last_success_number = last_success['id']
           bootscript_request = groovy.json.JsonOutput.toJson([
             type: "bootscript",
             options: [
               test: true
             ],
             data: [
-              release_path: "/job/kernel-build/job/${urlenc_branch}/lastSuccessfulBuild/artifact/${params.arch}/release",
+              release_path: "/job/kernel-build/job/${urlenc_branch}/${last_success_number}/artifact/${params.arch}/release",
               arch: params.arch,
               branch: params.buildBranch
             ]
