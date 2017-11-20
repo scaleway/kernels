@@ -132,36 +132,20 @@ test_stop() {
 
     _scw login -o "$SCW_ORGANIZATION" -t "$SCW_TOKEN" -s
 
-    failed=false
     grep -v "^$" $server_id_file | while read server_type server_name server_id; do
         echo "Removing $server_type server $server_name..."
         maximum_rm_tries=3
-        for try in `seq 1 $maximum_rm_tries`; do
-            if (get_server $server_id | jq -r '.server.state' | grep -qxE 'running'); then
-                _scw stop -t $server_id
-            fi
+        try=0
+        while (get_server $server_id | jq -r '.server.state' | grep -qxE 'running'); do
+            _scw stop -t $server_id
             sleep 1
-            if (get_server $server_id | jq -r '.server.state' | grep -qxE 'stopping'); then
-                _scw wait $server_id
-            fi
-            sleep 1
-            if (get_server $server_id | jq -r '.server.state' | grep -qxE 'stopped'); then
-                _scw rm $server_id
-            fi
-            if ! (get_server $server_id); then
+            if [ $try -gt $maximum_rm_tries ]; then
+                echo "Could not stop server $server_name properly"
                 break
             fi
-            backoff=$(echo "($try-1)*60" | bc)
-            sleep $backoff
+            ((try += 1))
         done
-        if (get_server $server_id); then
-            echo "Could not stop and remove server $server_name"
-            failed=true
-        else
-            echo "Server $server_name removed"
-        fi
     done
-    if $failed; then exit 1; fi
 }
 
 test_$action "$@"
