@@ -28,14 +28,20 @@ pipeline {
   }
 
   stages {
+    stage('Prepare environment') {
+      steps {
+        script {
+          env.BRANCH_URL_ENC = URLEncoder.encode(URLEncoder.encode(params.buildBranch, "UTF-8"), "UTF-8")
+        }
+      }
+    }
     stage('Test the kernel') {
       when {
         expression { params.noTest == false }
       }
       steps {
         script {
-          urlenc_branch = URLEncoder.encode(URLEncoder.encode(params.buildBranch, "UTF-8"), "UTF-8")
-          last_success = new groovy.json.JsonSlurperClassic().parseText(new URL("${jenkins_url}/job/kernel-build/job/${urlenc_branch}/lastSuccessfulBuild/api/json").getText())
+          last_success = new groovy.json.JsonSlurperClassic().parseText(new URL("${jenkins_url}/job/kernel-build/job/${env.BRANCH_URL_ENC}/lastSuccessfulBuild/api/json").getText())
           last_success_number = last_success['id']
           bootscript_request = groovy.json.JsonOutput.toJson([
             type: "bootscript",
@@ -43,9 +49,7 @@ pipeline {
               test: true
             ],
             data: [
-              release_path: "/job/kernel-build/job/${urlenc_branch}/${last_success_number}/artifact/${params.arch}/release",
-              arch: params.arch,
-              branch: params.buildBranch
+              url: "${jenkins_url}job/kernel-build/job/${env.BRANCH_URL_ENC}/${last_success_number}/artifact/${params.arch}/release"
             ]
           ])
           bootscript = input(
@@ -93,16 +97,13 @@ pipeline {
       }
       steps {
         script {
-          urlenc_branch = URLEncoder.encode(URLEncoder.encode(params.buildBranch, "UTF-8"), "UTF-8")
           bootscript_request = groovy.json.JsonOutput.toJson([
             type: "bootscript",
             options: [
               test: false
             ],
             data: [
-              release_path: "/job/kernel-build/job/${urlenc_branch}/lastSuccessfulBuild/artifact/${params.arch}/release",
-              arch: params.arch,
-              branch: params.buildBranch
+              url: "${jenkins_url}job/kernel-build/job/${env.BRANCH_URL_ENC}/lastSuccessfulBuild/artifact/${params.arch}/release"
             ]
           ])
           bootscript = input(
