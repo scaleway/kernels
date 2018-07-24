@@ -22,7 +22,7 @@ cp -r $GIT/{Documentation,fs} $KERNEL_SRC_DIR
 cp $GIT/include/uapi/linux/aufs_type.h $KERNEL_SRC_DIR/include/uapi/linux/aufs_type.h
 
 # Apply patches
-cat $GIT/${BINPREFIX}{base,kbuild,loopback,mmap,standalone}.patch | patch -d $KERNEL_SRC_DIR -p1
+cat $GIT/${BINPREFIX}{base,kbuild,mmap,standalone}.patch | patch -d $KERNEL_SRC_DIR -p1
 
 # Clean Up
 rm -rf $GIT
