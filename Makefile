@@ -60,7 +60,7 @@ pack: $(RELEASE_DIR) $(PACK_DEP)
 	@echo $(KVERSION) >$(RELEASE_DIR)/version
 	@echo $(TARGET_ARCH) >$(RELEASE_DIR)/arch
 	@echo "mainline" >$(RELEASE_DIR)/type
-	@echo "latest" >$(RELEASE_DIR)/flavor
+	@echo "lts-4.19" >$(RELEASE_DIR)/flavor
 	cd $(BUILD_DIR) && tar --owner=0 --group=0 -cf $(RELEASE_DIR)/include.tar include/*
 	cp -r $(BUILD_DIR)/lib/modules $(RELEASE_DIR)/modules
 	cd $(RELEASE_DIR) && tar --owner=0 --group=0 -cf modules.tar modules
