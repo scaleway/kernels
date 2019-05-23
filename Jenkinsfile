@@ -1,4 +1,4 @@
-def jenkins_url = new JenkinsLocationConfiguration().getUrl()
+def jenkins_url = JenkinsLocationConfiguration.get().getUrl()
 def kernel_build = new groovy.json.JsonSlurperClassic().parseText(new URL("${jenkins_url}/job/kernel-build/api/json").getText());
 def branches = [:]
 def branch_names = []
