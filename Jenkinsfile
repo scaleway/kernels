@@ -42,7 +42,7 @@ pipeline {
       steps {
         script {
           withCredentials([usernamePassword(credentialsId: 'scw-test-orga-token', usernameVariable: 'SCW_ORGANIZATION', passwordVariable: 'SCW_TOKEN')]) {
-            env.kernelRevision = sh(script: "curl -G -s https://cp-par1.scaleway.com/bootscripts -d title='ubuntu xenial ${env.kernelVersion} rev' -H 'x-auth-token: ${SCW_TOKEN}' | jq -r '[ .bootscripts[].title | scan(\"rev[0-9]+\")[3:] | tonumber ] | max // 0 | . + 1'", returnStdout: true).trim()
+            env.kernelRevision = sh(script: "curl -G -s https://cp-par1.scaleway.com/bootscripts -d title='ubuntu+xenial+${env.kernelVersion}+rev' -H 'x-auth-token: ${SCW_TOKEN}' | jq -r '[ .bootscripts[].title | scan(\"rev[0-9]+\")[3:] | tonumber ] | max // 0 | . + 1'", returnStdout: true).trim()
           }
         }
         echo "Kernel build revision: ${env.kernelRevision}"
