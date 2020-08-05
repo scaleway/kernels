@@ -74,7 +74,7 @@ pipeline {
           if (params.needsAdminApproval) {
             input message: "You can run some manual checks on the booted server(s). Confirm that the kernel stable ?", ok: 'Confirm'
             emailext(
-              to: "jtamba@online.net",
+              to: "compute-team+kernel-release@online.net",
               subject: "Kernel test #${env.BUILD_NUMBER} needs admin approval",
               body: """<p>A new version of kernel ${env.buildBranch} is being tested.\n ${servers_booted}\n You can ssh into the test server(s) and do some manual checks.</p>
               <p>If the kernel is fit for release, you can <a href="${env.JENKINS_URL}/blue/organizations/jenkins/kernel-release/detail/kernel-release/${env.BUILD_NUMBER}"> go to the pipeline</a> to confirm the build or otherwise abort it.</p>
@@ -135,14 +135,14 @@ pipeline {
         }
       }
       emailext(
-        to: "jtamba@online.net",
+        to: "compute-team+kernel-release@online.net",
         subject: subject,
         body: body
       )
     }
     failure {
       emailext(
-        to: "jtamba@online.net",
+        to: "compute-team+kernel-release@online.net",
         subject: "Kernel test ${env.buildBranch} #${env.BUILD_NUMBER} failed",
         body: """<p>See full log <a href="${env.JENKINS_URL}/blue/organizations/jenkins/kernel-release/detail/kernel-release/${env.BUILD_NUMBER}">here</a></p>"""
       )
