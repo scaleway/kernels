@@ -106,7 +106,7 @@ pipeline {
   post {
     success {
       emailext(
-        to: "jtamba@online.net",
+        to: "compute-team+kernel-build@online.net",
         subject: "Kernel build - ${env.JOB_NAME} #${env.BUILD_NUMBER}: ${env.kernelVersion} available for release",
         body: """<p>Start a test and release job from <a href="${env.JENKINS_URL}/blue/organizations/jenkins/kernel-release">here</a></p>
           <p>Or start it directly with ubuntu on a <a href="${env.JENKINS_URL}/job/kernel-release/buildWithParameters?buildBranch=mainline%2Flatest&buildNumber=${env.BUILD_NUMBER}&arch=x86_64&testServerType=VC1S&testImage=ubuntu-xenial">VC1S</a>, a <a href="${env.JENKINS_URL}/job/kernel-release/buildWithParameters?buildBranch=mainline%2Flatest&buildNumber=${env.BUILD_NUMBER}&arch=arm&testServerType=C1&testImage=ubuntu-xenial">C1</a> or an <a href="${env.JENKINS_URL}/job/kernel-release/buildWithParameters?buildBranch=mainline%2Flatest&buildNumber=${env.BUILD_NUMBER}&arch=arm64&testServerType=ARM64-2GB&testImage=ubuntu-xenial">ARM64-2GB</a></p>
